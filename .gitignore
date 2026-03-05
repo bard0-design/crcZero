@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Testing & coverage
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Type checking
+.mypy_cache/
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*~
+
+# AI assistant internal files
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# crcZero simulation artifacts (not sample_output/)
+*.vcd
+sim.vvp
+
+# Synthesis runner output
+synth/results/
+synth_out/
+
+# Vivado generated project (regenerate via hw_test/tcl/create_project.tcl)
+hw_test/vivado/
+
+# Vivado runtime profiling artifact
+dfx_runtime.txt
+
+# Private / uncommitted scratch area
+no_commit/

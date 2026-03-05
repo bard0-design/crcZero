@@ -1,0 +1,44 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "crczero"
+version = "0.1.0"
+description = "CRC HDL code generator: Verilog-2001, SystemVerilog, VHDL-1993"
+license = {text = "MIT"}
+authors = [{name = "Leonardo Capossio", email = "hello@bard0.com"}]
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = []
+keywords = ["CRC", "HDL", "Verilog", "SystemVerilog", "VHDL", "FPGA", "RTL", "code-generator", "hardware"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Electronic Design Automation (EDA)",
+    "Topic :: Software Development :: Code Generators",
+    "Typing :: Typed",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "pytest-cov"]
+
+[project.scripts]
+crcZero = "crczero.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/bard0-design/crcZero"
+Repository = "https://github.com/bard0-design/crcZero"
+"Bug Tracker" = "https://github.com/bard0-design/crcZero/issues"
+Changelog = "https://github.com/bard0-design/crcZero/blob/main/CHANGELOG.md"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/crczero"]

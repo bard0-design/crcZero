@@ -1,0 +1,80 @@
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  test:
+    name: Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install package and dev dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Install optional Python test dependencies
+        run: pip install crcmod yowasp-yosys
+
+      - name: Install Icarus Verilog and GHDL
+        run: sudo apt-get install -y iverilog ghdl
+
+      - name: Run tests
+        run: pytest --tb=short -q
+
+      - name: Verilog synthesis check (yowasp-yosys)
+        run: |
+          mkdir -p synth_out
+          crcZero --algorithm CRC-32/ISO-HDLC --data-width 8  --lang verilog --output synth_out/crc32_d8
+          crcZero --algorithm CRC-32/ISO-HDLC --data-width 32 --lang verilog --output synth_out/crc32_d32
+          crcZero --algorithm CRC-8/SMBUS     --data-width 8  --lang verilog --output synth_out/crc8
+          crcZero --algorithm CRC-32/ISO-HDLC --data-width 8  --lang verilog --output synth_out/crc32_d8  --axi-stream
+          crcZero --algorithm CRC-8/SMBUS     --data-width 8  --lang verilog --output synth_out/crc8      --axi-stream
+          yowasp-yosys -p "read_verilog synth_out/crc32_d8.v;  synth -flatten -noabc; stat" 2>&1 | tee synth_out/yosys_crc32_d8.log
+          yowasp-yosys -p "read_verilog synth_out/crc32_d32.v; synth -flatten -noabc; stat" 2>&1 | tee synth_out/yosys_crc32_d32.log
+          yowasp-yosys -p "read_verilog synth_out/crc8.v;      synth -flatten -noabc; stat" 2>&1 | tee synth_out/yosys_crc8.log
+          yowasp-yosys -p "read_verilog synth_out/crc32_d8.v synth_out/crc32_d8_axis.v; synth -top crc_32_iso_hdlc_d8_axis -flatten -noabc; stat" 2>&1 | tee synth_out/yosys_crc32_d8_axis.log
+          yowasp-yosys -p "read_verilog synth_out/crc8.v      synth_out/crc8_axis.v;     synth -top crc_8_smbus_d8_axis     -flatten -noabc; stat" 2>&1 | tee synth_out/yosys_crc8_axis.log
+          grep -i "error" synth_out/yosys_crc32_d8.log      && exit 1 || true
+          grep -i "error" synth_out/yosys_crc32_d32.log     && exit 1 || true
+          grep -i "error" synth_out/yosys_crc8.log          && exit 1 || true
+          grep -i "error" synth_out/yosys_crc32_d8_axis.log && exit 1 || true
+          grep -i "error" synth_out/yosys_crc8_axis.log     && exit 1 || true
+
+      - name: VHDL synthesis check (ghdl --synth)
+        run: |
+          mkdir -p synth_out
+          crcZero --algorithm CRC-32/ISO-HDLC --data-width 8  --lang vhdl --output synth_out/crc32_d8
+          crcZero --algorithm CRC-8/SMBUS     --data-width 8  --lang vhdl --output synth_out/crc8
+          crcZero --algorithm CRC-32/ISO-HDLC --data-width 8  --lang vhdl --output synth_out/crc32_d8 --axi-stream
+          crcZero --algorithm CRC-8/SMBUS     --data-width 8  --lang vhdl --output synth_out/crc8     --axi-stream
+          ghdl -a --std=93 synth_out/crc32_d8.vhd synth_out/crc32_d8_axis.vhd
+          ghdl -a --std=93 synth_out/crc8.vhd     synth_out/crc8_axis.vhd
+          ghdl --synth --std=93 crc_32_iso_hdlc_d8
+          ghdl --synth --std=93 crc_8_smbus_d8
+          ghdl --synth --std=93 crc_32_iso_hdlc_d8_axis
+          ghdl --synth --std=93 crc_8_smbus_d8_axis
+
+      - name: Run tests with coverage (Python 3.12 only)
+        if: matrix.python-version == '3.12'
+        run: pytest --cov=crczero --cov-report=xml --cov-report=term-missing -q
+
+      - name: Upload coverage report
+        if: matrix.python-version == '3.12'
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage.xml
+          fail_ci_if_error: false

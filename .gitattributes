@@ -1,0 +1,11 @@
+# Normalise all text files to LF on commit
+* text=auto eol=lf
+
+# Generated HDL samples — keep as text
+*.v   text eol=lf
+*.sv  text eol=lf
+*.vhd text eol=lf
+
+# Binary — don't touch
+*.vcd binary
+*.vvp binary

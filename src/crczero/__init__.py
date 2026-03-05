@@ -1,0 +1,6 @@
+from crczero.algorithm import Algorithm, poly_from_koopman, poly_to_koopman
+from crczero.catalog import CATALOG as catalog
+from crczero.generator import CrcGenerator
+
+__all__ = ["Algorithm", "CrcGenerator", "catalog", "poly_from_koopman", "poly_to_koopman"]
+__version__ = "0.1.0"
