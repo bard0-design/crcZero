@@ -2,12 +2,13 @@
 
 [![CI](https://github.com/bard0-design/crcZero/actions/workflows/ci.yml/badge.svg)](https://github.com/bard0-design/crcZero/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Hardware Tested](https://img.shields.io/badge/hardware%20tested-Arty%20A7--100T-brightgreen)](hw_test/)
 
 **Parallel CRC HDL code generator** — Verilog-2001, SystemVerilog, and VHDL-1993.
 
 Generates synthesizable, parallel CRC modules from a built-in catalog
 of 80+ named algorithms (reveng-verified), or from user-supplied polynomial parameters.
-Includes self-checking testbenches, AXI4-Stream wrappers, and multi-vendor synthesis checks.
+Includes self-checking testbenches, AXI4-Stream wrappers, and multi-vendor synthesis checks. Hardware tested on Arty A7-100T board.
 
 Licensed under the **MIT License**.
 
@@ -31,6 +32,9 @@ Licensed under the **MIT License**.
 - **Synthesis-verified** — all outputs pass Yosys (`yowasp-yosys`) across
   AMD/Xilinx, Altera/Intel, Lattice, Microchip, Efinix, and Gowin targets,
   and GHDL (`--synth`); pure behavioural RTL also targets ASIC flows
+- **Hardware-tested on silicon** — CRC-32/ISO-HDLC D=32 validated on Arty
+  A7-100T (Artix-7 FPGA) via JTAG-AXI; 6/6 test vectors confirmed correct
+  on real hardware (see [`hw_test/`](hw_test/))
 
 ---
 
@@ -685,6 +689,69 @@ CRC-32/ISO-HDLC, CRC-32/MPEG-2, and CRC-32/BZIP2 share the same polynomial
 > **Rule of thumb:** doubling the data width roughly doubles the XOR count.
 > On a typical AMD/Xilinx 7-series or Altera/Intel Cyclone V FPGA each 6-input LUT can absorb a 6-input XOR,
 > so the LUT count is approximately `total_xors / 5`.
+
+---
+
+## Hardware Test (Arty A7-100T)
+
+The [`hw_test/`](hw_test/) directory contains a complete Vivado flow that
+validates the generated AXI4-Stream wrapper on a real Artix-7 FPGA using
+**JTAG-AXI** — no soft processor required.
+
+### Requirements
+
+- Vivado 2022.2+ (tested on 2025.2)
+- Arty A7-100T connected via USB-JTAG
+- `crczero` installed (`pip install -e .`)
+
+### Steps
+
+**1. Generate the RTL** (if not already in `sample_output/`):
+
+```bash
+crcZero --algorithm CRC-32/ISO-HDLC --data-width 32 --lang verilog \
+        --output sample_output/crc_32_iso_hdlc_d32 --axi-stream
+```
+
+**2. Create the Vivado project** (Tcl console):
+
+```tcl
+source hw_test/tcl/create_project.tcl
+```
+
+**3. Synthesise, implement, generate bitstream** (Tcl console):
+
+```tcl
+source hw_test/tcl/run_impl.tcl
+```
+
+Typical runtime: ~5 min synthesis + ~4 min implementation.
+
+**4. Program the FPGA and run the test** (Tcl console, Hardware Manager open):
+
+```tcl
+source hw_test/tcl/hw_test.tcl
+```
+
+The script programs the FPGA, resets the AXI FIFO, sends 6 known packets
+via JTAG-AXI, and compares each result against the software oracle:
+
+```
+=== CRC-32/ISO-HDLC D=32 Hardware Test ===
+  Test                          Got           Expected      Result
+------------------------------------------------------------------------
+  b'1234'     1-word            0x9BE3E0A3    0x9BE3E0A3    PASS
+  b'12345678' 2-word            0x9AE0DAAF    0x9AE0DAAF    PASS
+  b'00000000' 1-word            0x2144DF1C    0x2144DF1C    PASS
+  b'FFFFFFFF' 1-word            0xFFFFFFFF    0xFFFFFFFF    PASS
+  b'DEADBEEF' 1-word            0x7C9CA35A    0x7C9CA35A    PASS
+  b'AABBCCDD'*2 2-word          0x1F6284EB    0x1F6284EB    PASS
+------------------------------------------------------------------------
+  ALL 6/6 TESTS PASSED
+```
+
+A heartbeat LED (LD0) blinks at ~1.5 Hz on power-up to confirm the design
+is alive. See [`hw_test/README.md`](hw_test/README.md) for full details.
 
 ---
 
