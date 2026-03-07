@@ -8,6 +8,10 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+---
+
+## [1.0.0] — 2026-03-07
+
 ### Added
 
 - **AXI4-Stream wrappers** — clocked FSM-based wrappers in Verilog-2001,
@@ -43,7 +47,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
-## [0.1.0] — 2026-03-05
+## [0.1.0-alpha] — 2026-03-05
 
 ### Added
 
@@ -61,4 +65,5 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - **Test suite** — 365+ tests covering: software oracle, GF(2) equation derivation (full catalog), per-word random vectors, mixed ref modes, renderer structural correctness, CLI, testbench renderers, optional crcmod cross-validation, optional iverilog simulation
 - **Zero runtime dependencies** — pure Python 3.9+, stdlib only
 
-[0.1.0]: https://github.com/bard0-design/crcZero/releases/tag/v0.1.0
+[1.0.0]: https://github.com/bard0-design/crcZero/releases/tag/v1.0.0
+[0.1.0-alpha]: https://github.com/bard0-design/crcZero/releases/tag/v0.1.0

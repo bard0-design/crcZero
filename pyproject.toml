@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "crczero"
-version = "0.1.0"
+version = "1.0.0"
 description = "CRC HDL code generator: Verilog-2001, SystemVerilog, VHDL-1993"
 license = {text = "MIT"}
 authors = [{name = "Leonardo Capossio", email = "hello@bard0.com"}]
@@ -13,7 +13,7 @@ requires-python = ">=3.9"
 dependencies = []
 keywords = ["CRC", "HDL", "Verilog", "SystemVerilog", "VHDL", "FPGA", "RTL", "code-generator", "hardware"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
