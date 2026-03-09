@@ -40,10 +40,16 @@ jobs:
       - name: Run tests (simulation tests must not skip)
         run: |
           pytest --tb=short -q 2>&1 | tee pytest_output.txt
-          # Fail CI if any simulation tests were skipped
-          if grep -E "skipped" pytest_output.txt | grep -qE "[1-9]"; then
-            echo "::error::Some tests were skipped — simulation tests must run in CI"
-            grep -i "skip" pytest_output.txt || true
+          # Parse the pytest summary line (e.g. "477 passed, 14 skipped")
+          # Fail CI if any tests were skipped — simulators must be available
+          SKIPPED=$(python3 -c "
+          import re, sys
+          text = open('pytest_output.txt').read()
+          m = re.search(r'(\d+) skipped', text)
+          print(m.group(1) if m else '0')
+          ")
+          if [ "$SKIPPED" -gt 0 ]; then
+            echo "::error::$SKIPPED tests were skipped — simulation tests must run in CI"
             exit 1
           fi
 

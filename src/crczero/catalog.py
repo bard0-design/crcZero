@@ -13,6 +13,8 @@ xor_out, check, residue). The 'check' field is the CRC of ASCII b"123456789"
 and is used for automatic self-testing.
 """
 
+from __future__ import annotations
+
 from crczero.algorithm import Algorithm
 
 CATALOG: dict[str, Algorithm] = {

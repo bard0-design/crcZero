@@ -15,6 +15,8 @@ Run:
     python hw_test/sw/expected_crcs.py
 """
 
+from __future__ import annotations
+
 import sys
 import struct
 from pathlib import Path

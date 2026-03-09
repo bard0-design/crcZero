@@ -20,9 +20,10 @@ JTAG-AXI ──► SmartConnect ──► axi_fifo_mm_s (TX+RX, base 0x44A00000)
 
 - **Write** data words to TDFD (one per transaction), then write the total
   byte length to TLR — the FIFO sends the packet with TLAST on the final beat.
-- **Poll** RDFO until non-zero, drain all words, return the last.  The AXI-S
-  wrapper emits one output beat per input beat; only the TLAST beat carries
-  the final XOR'd CRC result.
+  `send_packet` checks TDFV (TX vacancy) before writing to prevent overflow.
+- **Read** using RLR (receive length register) to wait for a complete packet,
+  then drain all words and return the last.  The AXI-S wrapper emits one output
+  beat per input beat; only the TLAST beat carries the final XOR'd CRC result.
 - **Heartbeat LED** (LD0, pin H5) blinks at ~1.5 Hz from the 100 MHz clock
   to confirm the design is alive immediately after programming.
 
@@ -91,7 +92,12 @@ The script:
 2. Resets the FIFO
 3. Sends 8 known packets and reads back the CRC result for each
 4. Sends 2 back-to-back packets (no FIFO reset between) to verify wrapper auto-reset
-5. Compares against software oracle values and prints PASS/FAIL
+5. Sends 11 long packets (1, 2, 3, 4, 8, 16, 32, 64, 128, 512, 1024 beats) with
+   deterministic data patterns to stress-test multi-beat CRC computation
+6. Compares against software oracle values and prints PASS/FAIL
+
+`run_impl.tcl` checks timing closure (WNS/WHS) after implementation and warns
+on violations.
 
 Expected output:
 
@@ -109,8 +115,19 @@ Expected output:
   b'123456789012' 3-word        0x5D34EB96      0x5D34EB96      PASS
   back-to-back pkt A (1234)     0x9BE3E0A3      0x9BE3E0A3      PASS
   back-to-back pkt B (0000)     0x2144DF1C      0x2144DF1C      PASS
+  long-1-beat                   0x1A5A601F      0x1A5A601F      PASS
+  long-2-beat                   0x04C2A02D      0x04C2A02D      PASS
+  long-3-beat                   0x7D97AAE3      0x7D97AAE3      PASS
+  long-4-beat                   0x434C6327      0x434C6327      PASS
+  long-8-beat                   0xBC3AD22D      0xBC3AD22D      PASS
+  long-16-beat                  0x448992FD      0x448992FD      PASS
+  long-32-beat                  0x80FB3D48      0x80FB3D48      PASS
+  long-64-beat                  0x5110FA87      0x5110FA87      PASS
+  long-128-beat                 0xF8C1CA8A      0xF8C1CA8A      PASS
+  long-512-beat                 0xA7D3AC7C      0xA7D3AC7C      PASS
+  long-1024-beat                0x20C17E20      0x20C17E20      PASS
 ------------------------------------------------------------------------
-  ALL 10/10 TESTS PASSED
+  ALL 21/21 TESTS PASSED
 ```
 
 ## Data word byte ordering

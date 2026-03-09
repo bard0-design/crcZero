@@ -10,6 +10,43 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.1.0] — 2026-03-09
+
+### Added
+
+- **Long packet hardware tests** — 11 new test vectors (1, 2, 3, 4, 8, 16, 32,
+  64, 128, 512, 1024 beats) with deterministic data patterns; all 21/21 tests
+  pass on Arty A7-100T hardware
+- **Sub-byte CRC equation tests** — 30 new tests covering all 15 sub-byte CRC
+  algorithms (CRC-3 through CRC-7) against software oracle and catalog check
+  values
+- **SystemVerilog compilation tests** — `test_compilation_sv.py` verifies
+  `iverilog -g2012` compilation for 7 algorithm/width combinations
+- **Author and license headers** — all 38 source files now carry author
+  attribution and MIT license headers
+
+### Fixed
+
+- **`recv_crc` partial read race** — now uses RLR (receive length register)
+  to wait for complete packets instead of polling RDFO occupancy
+- **`send_packet` silent overflow** — checks TDFV vacancy before writing to
+  prevent TX FIFO overflow
+- **`run_impl.tcl` timing check** — reports WNS/WHS after implementation and
+  warns on timing violations
+- **`run_impl.tcl` Windows compatibility** — `exec nproc` replaced with
+  cross-platform CPU count detection (`NUMBER_OF_PROCESSORS` fallback)
+
+### Changed
+
+- **FIFO depth** — TX and RX FIFO depth increased to 2048 words to support
+  1024-beat packet tests
+- **CI hardening** — zero-skip policy enforced; SystemVerilog compilation
+  checks added to CI workflow
+- **README** — condensed from ~790 to ~380 lines; improved structure
+- **Test count**: 477 passing (was 447)
+
+---
+
 ## [1.0.0] — 2026-03-07
 
 ### Added
@@ -65,5 +102,6 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - **Test suite** — 365+ tests covering: software oracle, GF(2) equation derivation (full catalog), per-word random vectors, mixed ref modes, renderer structural correctness, CLI, testbench renderers, optional crcmod cross-validation, optional iverilog simulation
 - **Zero runtime dependencies** — pure Python 3.9+, stdlib only
 
+[1.1.0]: https://github.com/bard0-design/crcZero/releases/tag/v1.1.0
 [1.0.0]: https://github.com/bard0-design/crcZero/releases/tag/v1.0.0
 [0.1.0-alpha]: https://github.com/bard0-design/crcZero/releases/tag/v0.1.0

@@ -45,6 +45,12 @@ synth_out/
 # Vivado generated project (regenerate via hw_test/tcl/create_project.tcl)
 hw_test/vivado/
 
+# Vivado session logs and journals
+vivado*.jou
+vivado*.log
+vivado*.backup.jou
+vivado*.backup.log
+
 # Vivado runtime profiling artifact
 dfx_runtime.txt
 

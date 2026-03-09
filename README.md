@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Hardware Tested](https://img.shields.io/badge/hardware%20tested-Arty%20A7--100T-brightgreen)](hw_test/)
 
-**Parallel CRC HDL code generator** — Verilog-2001, SystemVerilog, and VHDL-1993.
+**Parallel CRC HDL code generator** — Verilog-2001, SystemVerilog, and VHDL-1993. Hardware tested on Arty A7-100T.
 
 Generates synthesizable, parallel CRC modules from a built-in catalog of 80+ named algorithms
 (reveng-verified), or from user-supplied polynomial parameters.
@@ -26,7 +26,7 @@ Includes self-checking testbenches, AXI4-Stream wrappers, and multi-vendor synth
 - **Synthesis-verified** — all outputs pass Yosys (`yowasp-yosys`) across AMD/Xilinx, Altera/Intel,
   Lattice, Microchip, Efinix, and Gowin targets, and GHDL (`--synth`); pure behavioural RTL targets ASIC flows
 - **Hardware-tested on silicon** — CRC-32/ISO-HDLC D=32 validated on Arty A7-100T (Artix-7 FPGA)
-  via JTAG-AXI; 6/6 test vectors confirmed correct on real hardware (see [`hw_test/`](hw_test/))
+  via JTAG-AXI; 21/21 test vectors (1–1024 beats) confirmed correct on real hardware (see [`hw_test/`](hw_test/))
 
 ## How It Works
 
@@ -258,7 +258,7 @@ assert gen.self_test()  # verifies software oracle matches catalog check value
 ```bash
 pip install -e ".[dev]"
 pytest tests/
-# 447 tests — catalog check values, equation derivation, renderer output,
+# 477 tests — catalog check values, equation derivation, renderer output,
 # CLI flags, testbench renderers, AXI4-Stream wrapper, and full RTL simulation
 ```
 
@@ -399,8 +399,11 @@ without FIFO reset) via JTAG-AXI, and compares each result against the software 
   b'123456789012' 3-word        0x5D34EB96    0x5D34EB96    PASS
   back-to-back pkt A (1234)     0x9BE3E0A3    0x9BE3E0A3    PASS
   back-to-back pkt B (0000)     0x2144DF1C    0x2144DF1C    PASS
+  long-1-beat                   0x1A5A601F    0x1A5A601F    PASS
+  ...
+  long-1024-beat                0x20C17E20    0x20C17E20    PASS
 ------------------------------------------------------------------------
-  ALL 10/10 TESTS PASSED
+  ALL 21/21 TESTS PASSED
 ```
 
 A heartbeat LED (LD0) blinks at ~1.5 Hz on power-up to confirm the design is alive.

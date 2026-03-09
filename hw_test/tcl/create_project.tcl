@@ -79,6 +79,9 @@ set_property -dict [list \
 # TX (AXI_STR_TXD) → CRC slave    RX (AXI_STR_RXD) ← CRC master
 # C_USE_TX_CTRL=0: packet length via TLR register (no separate control stream)
 # Parameter names verified against Vivado 2025.2 (axi_fifo_mm_s v4.x)
+# FIFO depth 2048: supports up to 1024-beat test packets (wrapper echoes every
+# beat, so RX needs same depth as TX).  Uses ~8 BRAMs on Artix-7; adjust for
+# smaller parts if needed.
 set fifo [create_bd_cell -type ip -vlnv xilinx.com:ip:axi_fifo_mm_s fifo_crc]
 set_property -dict [list \
     CONFIG.C_AXI_STR_TXD_TDATA_WIDTH {32}   \
