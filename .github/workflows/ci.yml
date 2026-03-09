@@ -32,8 +32,20 @@ jobs:
       - name: Install Icarus Verilog and GHDL
         run: sudo apt-get install -y iverilog ghdl
 
-      - name: Run tests
-        run: pytest --tb=short -q
+      - name: Verify simulators are available
+        run: |
+          which iverilog && which vvp && echo "iverilog OK"
+          which ghdl && echo "ghdl OK"
+
+      - name: Run tests (simulation tests must not skip)
+        run: |
+          pytest --tb=short -q 2>&1 | tee pytest_output.txt
+          # Fail CI if any simulation tests were skipped
+          if grep -E "skipped" pytest_output.txt | grep -qE "[1-9]"; then
+            echo "::error::Some tests were skipped — simulation tests must run in CI"
+            grep -i "skip" pytest_output.txt || true
+            exit 1
+          fi
 
       - name: Verilog synthesis check (yowasp-yosys)
         run: |
@@ -53,6 +65,18 @@ jobs:
           grep -i "error" synth_out/yosys_crc8.log          && exit 1 || true
           grep -i "error" synth_out/yosys_crc32_d8_axis.log && exit 1 || true
           grep -i "error" synth_out/yosys_crc8_axis.log     && exit 1 || true
+
+      - name: SystemVerilog compilation check (iverilog -g2012)
+        run: |
+          mkdir -p synth_out
+          crcZero --algorithm CRC-32/ISO-HDLC --data-width 8  --lang sv --output synth_out/sv_crc32_d8
+          crcZero --algorithm CRC-32/ISO-HDLC --data-width 8  --lang sv --output synth_out/sv_crc32_d8 --axi-stream
+          crcZero --algorithm CRC-8/SMBUS     --data-width 8  --lang sv --output synth_out/sv_crc8
+          crcZero --algorithm CRC-8/SMBUS     --data-width 8  --lang sv --output synth_out/sv_crc8     --axi-stream
+          iverilog -g2012 -t null synth_out/sv_crc32_d8.sv
+          iverilog -g2012 -t null synth_out/sv_crc8.sv
+          iverilog -g2012 -t null synth_out/sv_crc32_d8.sv synth_out/sv_crc32_d8_axis.sv
+          iverilog -g2012 -t null synth_out/sv_crc8.sv     synth_out/sv_crc8_axis.sv
 
       - name: VHDL synthesis check (ghdl --synth)
         run: |

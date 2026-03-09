@@ -1,3 +1,8 @@
+# crcZero -- CRC HDL Generator
+# https://github.com/bard0-design/crcZero
+#
+# Author     : Leonardo Capossio - bard0 design <hello@bard0.com>
+# License    : MIT
 """Validate GF(2) equation derivation against the software_crc oracle.
 
 For each algorithm, we simulate the derived parallel equations word by word
@@ -150,6 +155,41 @@ def test_check_value_all_catalog(name):
     assert got == alg.check, (
         f"{name}: catalog check=0x{alg.check:0{hex_w}X}, "
         f"equations=0x{got:0{hex_w}X}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Sub-byte CRC widths (< 8 bits): verify equation derivation with D=8
+# ---------------------------------------------------------------------------
+
+SUB_BYTE_ALGORITHMS = [
+    n for n in sorted(CATALOG.keys())
+    if CATALOG[n].width < 8
+]
+
+
+@pytest.mark.parametrize("name", SUB_BYTE_ALGORITHMS)
+def test_check_value_sub_byte_crc(name):
+    """Sub-byte CRC equations (width < 8) must reproduce the catalog check value."""
+    alg = CATALOG[name]
+    got = _simulate_full_message(alg, 8, b"123456789")
+    hex_w = (alg.width + 3) // 4
+    assert got == alg.check, (
+        f"{name}: catalog check=0x{alg.check:0{hex_w}X}, "
+        f"equations=0x{got:0{hex_w}X}"
+    )
+
+
+@pytest.mark.parametrize("name", SUB_BYTE_ALGORITHMS)
+def test_sub_byte_equations_vs_software(name):
+    """Sub-byte CRC equations must match software oracle for arbitrary data."""
+    alg = CATALOG[name]
+    message = b"\xde\xad\xbe\xef\x00\x11\x22\x33"
+    expected = compute_crc(alg, message)
+    got = _simulate_full_message(alg, 8, message)
+    hex_w = (alg.width + 3) // 4
+    assert got == expected, (
+        f"{name}: software=0x{expected:0{hex_w}X}, equations=0x{got:0{hex_w}X}"
     )
 
 

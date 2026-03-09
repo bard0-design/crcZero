@@ -89,8 +89,9 @@ source hw_test/tcl/hw_test.tcl
 The script:
 1. Programs the FPGA with the bitstream
 2. Resets the FIFO
-3. Sends 6 known packets and reads back the CRC result for each
-4. Compares against software oracle values and prints PASS/FAIL
+3. Sends 8 known packets and reads back the CRC result for each
+4. Sends 2 back-to-back packets (no FIFO reset between) to verify wrapper auto-reset
+5. Compares against software oracle values and prints PASS/FAIL
 
 Expected output:
 
@@ -104,8 +105,12 @@ Expected output:
   b'FFFFFFFF' 1-word            0xFFFFFFFF      0xFFFFFFFF      PASS
   b'DEADBEEF' 1-word            0x7C9CA35A      0x7C9CA35A      PASS
   b'AABBCCDD'*2 2-word          0x1F6284EB      0x1F6284EB      PASS
+  b'01000000' 1-word            0x99F8B879      0x99F8B879      PASS
+  b'123456789012' 3-word        0x5D34EB96      0x5D34EB96      PASS
+  back-to-back pkt A (1234)     0x9BE3E0A3      0x9BE3E0A3      PASS
+  back-to-back pkt B (0000)     0x2144DF1C      0x2144DF1C      PASS
 ------------------------------------------------------------------------
-  ALL 6/6 TESTS PASSED
+  ALL 10/10 TESTS PASSED
 ```
 
 ## Data word byte ordering

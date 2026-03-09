@@ -83,8 +83,8 @@ set fifo [create_bd_cell -type ip -vlnv xilinx.com:ip:axi_fifo_mm_s fifo_crc]
 set_property -dict [list \
     CONFIG.C_AXI_STR_TXD_TDATA_WIDTH {32}   \
     CONFIG.C_AXI_STR_RXD_TDATA_WIDTH {32}   \
-    CONFIG.C_TX_FIFO_DEPTH           {512}  \
-    CONFIG.C_RX_FIFO_DEPTH           {512}  \
+    CONFIG.C_TX_FIFO_DEPTH           {2048} \
+    CONFIG.C_RX_FIFO_DEPTH           {2048} \
     CONFIG.C_USE_TX_DATA             {1}    \
     CONFIG.C_USE_RX_DATA             {1}    \
     CONFIG.C_USE_TX_CTRL             {0}    \

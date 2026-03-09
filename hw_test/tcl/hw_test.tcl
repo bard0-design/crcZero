@@ -55,30 +55,46 @@ proc fifo_reset {} {
 }
 
 # Write N 32-bit words to TDFD then assert TLAST via TLR.
+# Checks TX FIFO vacancy (TDFV) before writing to avoid overflow.
 proc send_packet {words} {
-    global TDFD TLR
+    global TDFD TLR TDFV
+    set nwords [llength $words]
+    set vacancy [axil_read $TDFV]
+    if {$vacancy < $nwords} {
+        error "TX FIFO vacancy ($vacancy) < packet length ($nwords). Reset FIFO first."
+    }
     foreach w $words { axil_write $TDFD $w }
-    axil_write $TLR [expr {[llength $words] * 4}]
+    axil_write $TLR [expr {$nwords * 4}]
 }
 
-# Poll RDFO until occupancy > 0, drain all words, return the last.
-# The AXI-S wrapper emits one beat per input beat; only the TLAST beat
-# (the last word in the burst) carries the final XOR'd CRC result.
+# Wait for the complete RX packet using RLR (receive length register),
+# then drain all words and return the last (which carries the final CRC).
+# RLR reports the byte length of the oldest complete packet in the RX FIFO.
+# This avoids the race where RDFO reports a partial occupancy before the
+# full packet has been written.
 proc recv_crc {{timeout_ms 500}} {
-    global RDFO RDFD
+    global RLR RDFO RDFD
     set deadline [expr {[clock milliseconds] + $timeout_ms}]
+    # Wait for RLR to report a non-zero packet length (complete packet arrived)
     while {[clock milliseconds] < $deadline} {
-        set occ [axil_read $RDFO]
-        if {$occ > 0} {
-            set result [axil_read $RDFD]
-            for {set j 1} {$j < $occ} {incr j} {
-                set result [axil_read $RDFD]
-            }
-            return $result
+        set rlr_val [axil_read $RLR]
+        if {$rlr_val > 0} {
+            break
         }
         after 1
     }
-    error "Timeout: RDFO stayed 0 for ${timeout_ms} ms"
+    if {$rlr_val == 0} {
+        error "Timeout: RLR stayed 0 for ${timeout_ms} ms (no complete packet)"
+    }
+    # RLR is in bytes; compute word count
+    set nwords [expr {$rlr_val / 4}]
+    if {$nwords < 1} { set nwords 1 }
+    # Drain all words; the last word carries the CRC result
+    set result 0
+    for {set j 0} {$j < $nwords} {incr j} {
+        set result [axil_read $RDFD]
+    }
+    return $result
 }
 
 # ── Program FPGA ──────────────────────────────────────────────────────────────
@@ -120,6 +136,8 @@ set test_vectors [list \
     "b'FFFFFFFF' 1-word"     {0xFFFFFFFF}              0xFFFFFFFF \
     "b'DEADBEEF' 1-word"     {0xEFBEADDE}              0x7C9CA35A \
     "b'AABBCCDD'*2 2-word"   {0xDDCCBBAA 0xDDCCBBAA}  0x1F6284EB \
+    "b'01000000' 1-word"     {0x00000001}              0x99F8B879 \
+    "b'123456789012' 3-word" {0x34333231 0x38373635 0x32313039}  0x5D34EB96 \
 ]
 
 # ── Run tests ─────────────────────────────────────────────────────────────────
@@ -143,6 +161,69 @@ for {set i 0} {$i < [llength $test_vectors]} {incr i 3} {
     send_packet $words
     set got [recv_crc]
 
+    if {$got == $expected} { set result PASS; incr pass } \
+    else                   { set result "FAIL <<<"; incr fail }
+
+    puts [format "  %-28s  0x%08X    0x%08X    %s" \
+          $desc $got $expected $result]
+}
+
+# ── Back-to-back test (no fifo_reset between packets) ────────────────────────
+# Verifies the AXI-S wrapper correctly resets crc_reg after m_axis handshake.
+fifo_reset
+send_packet {0x34333231}      ;# pkt A: b"1234"
+set got_a [recv_crc]
+send_packet {0x00000000}      ;# pkt B: b"\0\0\0\0" — no fifo_reset between
+set got_b [recv_crc]
+
+set total [expr {$total + 2}]
+set exp_a 0x9BE3E0A3
+set exp_b 0x2144DF1C
+foreach {desc got expected} [list \
+    "back-to-back pkt A (1234)"  $got_a $exp_a \
+    "back-to-back pkt B (0000)"  $got_b $exp_b \
+] {
+    if {$got == $expected} { set result PASS; incr pass } \
+    else                   { set result "FAIL <<<"; incr fail }
+    puts [format "  %-28s  0x%08X    0x%08X    %s" \
+          $desc $got $expected $result]
+}
+
+# ── Long packet tests (1..1024 beats, deterministic pattern) ───────────────
+# word[i] = ((i * 0x9E3779B9) + 0xDEADBEEF) & 0xFFFFFFFF
+# Must match make_long_packet_words() in hw_test/sw/expected_crcs.py.
+proc make_long_packet {nbeats} {
+    set words {}
+    for {set i 0} {$i < $nbeats} {incr i} {
+        lappend words [expr {(($i * 0x9E3779B9) + 0xDEADBEEF) & 0xFFFFFFFF}]
+    }
+    return $words
+}
+
+set long_vectors [list \
+    1    0x1A5A601F \
+    2    0x04C2A02D \
+    3    0x7D97AAE3 \
+    4    0x434C6327 \
+    8    0xBC3AD22D \
+    16   0x448992FD \
+    32   0x80FB3D48 \
+    64   0x5110FA87 \
+    128  0xF8C1CA8A \
+    512  0xA7D3AC7C \
+    1024 0x20C17E20 \
+]
+
+for {set i 0} {$i < [llength $long_vectors]} {incr i 2} {
+    set nbeats   [lindex $long_vectors $i]
+    set expected [lindex $long_vectors [expr {$i+1}]]
+    set desc     [format "long-%d-beat" $nbeats]
+
+    fifo_reset
+    send_packet [make_long_packet $nbeats]
+    set got [recv_crc]
+
+    incr total
     if {$got == $expected} { set result PASS; incr pass } \
     else                   { set result "FAIL <<<"; incr fail }
 

@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+# crcZero -- CRC HDL Generator
+# https://github.com/bard0-design/crcZero
+#
+# Author     : Leonardo Capossio - bard0 design <hello@bard0.com>
+# License    : MIT
 """
 Compute expected CRC-32/ISO-HDLC values for the hw_test hardware test vectors.
 
@@ -36,18 +41,40 @@ TEST_VECTORS = [
     ("b'FFFFFFFF' 1-word",   [0xFFFFFFFF]),
     ("b'DEADBEEF' 1-word",   [0xEFBEADDE]),
     ("b'AABBCCDD'*2 2-word", [0xDDCCBBAA, 0xDDCCBBAA]),
+    ("b'01000000' 1-word",   [0x00000001]),
+    ("b'123456789012' 3-word", [0x34333231, 0x38373635, 0x32313039]),
+]
+
+
+def make_long_packet_words(nbeats: int) -> list[int]:
+    """Generate a deterministic N-beat packet: word[i] = (i * 0x9E3779B9) & 0xFFFFFFFF."""
+    return [((i * 0x9E3779B9) + 0xDEADBEEF) & 0xFFFFFFFF for i in range(nbeats)]
+
+
+# ── Long packet test vectors ────────────────────────────────────────────────
+LONG_PACKET_BEATS = [1, 2, 3, 4, 8, 16, 32, 64, 128, 512, 1024]
+
+LONG_PACKET_VECTORS = [
+    (f"long-{n}-beat", make_long_packet_words(n)) for n in LONG_PACKET_BEATS
 ]
 
 
 def main():
     print("CRC-32/ISO-HDLC  (poly=0x04C11DB7, init=0xFFFFFFFF, ref, xor=0xFFFFFFFF)")
-    print(f"  {'Description':<28}  {'Bytes (hex)':<20}  Expected CRC")
+    print(f"  {'Description':<28}  {'Beats':<8}  Expected CRC")
     print("-" * 72)
 
     for desc, words in TEST_VECTORS:
         data = words_to_bytes(words)
         crc = compute_crc(ALG, data)
-        print(f"  {desc:<28}  {data.hex():<20}  0x{crc:08X}")
+        print(f"  {desc:<28}  {len(words):<8}  0x{crc:08X}")
+
+    print()
+    print("-- Long packet vectors (deterministic pattern) --")
+    for desc, words in LONG_PACKET_VECTORS:
+        data = words_to_bytes(words)
+        crc = compute_crc(ALG, data)
+        print(f"  {desc:<28}  {len(words):<8}  0x{crc:08X}")
 
     print()
     print("Paste these expected values into hw_test/tcl/hw_test.tcl if they differ.")
