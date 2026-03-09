@@ -1,3 +1,8 @@
+# crcZero -- CRC HDL Generator
+# https://github.com/bard0-design/crcZero
+#
+# Author     : Leonardo Capossio - bard0 design <hello@bard0.com>
+# License    : MIT
 """Integration test: compile and simulate generated Verilog with iverilog+vvp.
 
 This closes the most critical gap in the test suite: it actually runs the

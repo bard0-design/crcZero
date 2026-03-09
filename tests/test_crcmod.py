@@ -1,3 +1,8 @@
+# crcZero -- CRC HDL Generator
+# https://github.com/bard0-design/crcZero
+#
+# Author     : Leonardo Capossio - bard0 design <hello@bard0.com>
+# License    : MIT
 """Cross-validate our software_crc oracle against crcmod (independent implementation).
 
 crcmod is a well-established Python CRC library used in production systems.

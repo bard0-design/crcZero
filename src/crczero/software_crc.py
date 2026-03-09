@@ -1,3 +1,8 @@
+# crcZero -- CRC HDL Generator
+# https://github.com/bard0-design/crcZero
+#
+# Author     : Leonardo Capossio - bard0 design <hello@bard0.com>
+# License    : MIT
 """Pure-Python Williams model CRC calculator.
 
 This is the golden reference implementation used for:

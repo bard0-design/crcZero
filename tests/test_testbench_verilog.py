@@ -1,3 +1,8 @@
+# crcZero -- CRC HDL Generator
+# https://github.com/bard0-design/crcZero
+#
+# Author     : Leonardo Capossio - bard0 design <hello@bard0.com>
+# License    : MIT
 """Structural tests for the Verilog-2001 testbench renderer."""
 
 import re

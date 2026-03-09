@@ -1,3 +1,8 @@
+# crcZero -- CRC HDL Generator
+# https://github.com/bard0-design/crcZero
+#
+# Author     : Leonardo Capossio - bard0 design <hello@bard0.com>
+# License    : MIT
 """Integration test: AXI4-Stream Verilog wrapper simulated with iverilog/vvp.
 
 Each test sends multiple packets through the generated wrapper, applies

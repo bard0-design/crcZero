@@ -1,3 +1,8 @@
+# crcZero -- CRC HDL Generator
+# https://github.com/bard0-design/crcZero
+#
+# Author     : Leonardo Capossio - bard0 design <hello@bard0.com>
+# License    : MIT
 """Verilog-2001 AXI4-Stream CRC wrapper renderer.
 
 Wraps the existing combinatorial CRC core with a clocked AXI4-Stream interface.

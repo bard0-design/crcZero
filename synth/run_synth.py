@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+# crcZero -- CRC HDL Generator
+# https://github.com/bard0-design/crcZero
+#
+# Author     : Leonardo Capossio - bard0 design <hello@bard0.com>
+# License    : MIT
 """Synthesis runner — test crcZero RTL against multiple FPGA vendor targets.
 
 Uses yowasp-yosys (Yosys compiled to WebAssembly) for all vendors.

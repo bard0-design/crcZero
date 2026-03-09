@@ -1,3 +1,8 @@
+# crcZero -- CRC HDL Generator
+# https://github.com/bard0-design/crcZero
+#
+# Author     : Leonardo Capossio - bard0 design <hello@bard0.com>
+# License    : MIT
 """Integration test: compile and simulate generated VHDL with ghdl.
 
 Closes the VHDL verification gap: actually runs the generated RTL through

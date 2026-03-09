@@ -1,3 +1,8 @@
+# crcZero -- CRC HDL Generator
+# https://github.com/bard0-design/crcZero
+#
+# Author     : Leonardo Capossio - bard0 design <hello@bard0.com>
+# License    : MIT
 """GF(2) parallel CRC equation derivation.
 
 Uses iterative symbolic unrolling to derive, for each CRC output bit,
