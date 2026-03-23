@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "crczero"
-version = "1.1.0"
+version = "1.2.0"
 description = "CRC HDL code generator: Verilog-2001, SystemVerilog, VHDL-1993"
 license = {text = "MIT"}
 authors = [{name = "Leonardo Capossio", email = "hello@bard0.com"}]
