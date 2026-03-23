@@ -10,6 +10,10 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+### Added
+
+- **C reference output** — portable header/source generation via `--lang c` and `CrcGenerator.generate_c()`
+
 ## [1.1.0] — 2026-03-09
 
 ### Added

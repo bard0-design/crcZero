@@ -57,7 +57,7 @@ def build_parser() -> argparse.ArgumentParser:
         description=(
             "crcZero — CRC HDL code generator.\n"
             "Generates synthesizable Verilog-2001, SystemVerilog, or VHDL-1993 "
-            "parallel CRC modules."
+            "parallel CRC modules, plus a portable C reference implementation."
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
@@ -129,11 +129,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     gen.add_argument(
         "--lang",
-        choices=["verilog", "sv", "vhdl", "all"],
+        choices=["verilog", "sv", "vhdl", "c", "all"],
         default="verilog",
         help=(
             "Output language: verilog (Verilog-2001), sv (SystemVerilog), "
-            "vhdl (VHDL-1993), or all three. Default: verilog."
+            "vhdl (VHDL-1993), c (portable reference), or all outputs. "
+            "Default: verilog."
         ),
     )
     gen.add_argument(
@@ -143,7 +144,7 @@ def build_parser() -> argparse.ArgumentParser:
         help=(
             "Output file path (without extension). "
             "If omitted, output goes to stdout. "
-            "When --lang=all, extensions .v / .sv / .vhd are appended automatically."
+            "When --lang=all, extensions .v / .sv / .vhd / .h / .c are appended automatically."
         ),
     )
     gen.add_argument(
@@ -366,10 +367,10 @@ def main(argv: list[str] | None = None) -> None:
     module_name = args.module_name
 
     langs_to_generate = (
-        ["verilog", "sv", "vhdl"] if lang == "all" else [lang]
+        ["verilog", "sv", "vhdl", "c"] if lang == "all" else [lang]
     )
-    ext_map     = {"verilog": ".v",     "sv": ".sv",     "vhdl": ".vhd"}
-    tb_ext_map  = {"verilog": "_tb.v",                   "vhdl": "_tb.vhd"}
+    ext_map     = {"verilog": ".v",     "sv": ".sv",      "vhdl": ".vhd"}
+    tb_ext_map  = {"verilog": "_tb.v",                    "vhdl": "_tb.vhd"}
     ax_ext_map  = {"verilog": "_axis.v", "sv": "_axis.sv", "vhdl": "_axis.vhd"}
 
     for l in langs_to_generate:
@@ -377,50 +378,62 @@ def main(argv: list[str] | None = None) -> None:
             code = gen.generate_verilog(module_name)
         elif l == "sv":
             code = gen.generate_systemverilog(module_name)
-        else:
+        elif l == "vhdl":
             code = gen.generate_vhdl(module_name)
 
         if output_stem is None:
-            _write_output(code, None)
-            if args.testbench and l != "sv":
-                if l == "verilog":
-                    tb_code = gen.generate_testbench_verilog(module_name)
-                else:
-                    tb_code = gen.generate_testbench_vhdl(module_name)
-                _write_output(tb_code, None)
-            if args.axi_stream:
-                if l == "verilog":
-                    ax_code = gen.generate_axi_stream_verilog(module_name)
-                elif l == "sv":
-                    ax_code = gen.generate_axi_stream_sv(module_name)
-                else:
-                    ax_code = gen.generate_axi_stream_vhdl(module_name)
-                _write_output(ax_code, None)
-        else:
-            out_path = Path(output_stem).with_suffix(ext_map[l])
-            _write_output(code, out_path)
-            if args.testbench and l != "sv":
-                if l == "verilog":
-                    tb_code = gen.generate_testbench_verilog(module_name)
-                else:
-                    tb_code = gen.generate_testbench_vhdl(module_name)
-                tb_path = Path(output_stem + tb_ext_map[l])
-                _write_output(tb_code, tb_path)
-                if args.simulate:
+            if l == "c":
+                header, source = gen.generate_c(module_name)
+                _write_output("// ---- C header ----\n" + header, None)
+                _write_output("// ---- C source ----\n" + source, None)
+            else:
+                _write_output(code, None)
+                if args.testbench and l != "sv":
                     if l == "verilog":
-                        _simulate_verilog(out_path, tb_path)
+                        tb_code = gen.generate_testbench_verilog(module_name)
                     else:
-                        tb_name = tb_path.stem
-                        _simulate_vhdl(out_path, tb_path, tb_name)
-            if args.axi_stream:
-                if l == "verilog":
-                    ax_code = gen.generate_axi_stream_verilog(module_name)
-                elif l == "sv":
-                    ax_code = gen.generate_axi_stream_sv(module_name)
-                else:
-                    ax_code = gen.generate_axi_stream_vhdl(module_name)
-                ax_path = Path(output_stem + ax_ext_map[l])
-                _write_output(ax_code, ax_path)
+                        tb_code = gen.generate_testbench_vhdl(module_name)
+                    _write_output(tb_code, None)
+                if args.axi_stream:
+                    if l == "verilog":
+                        ax_code = gen.generate_axi_stream_verilog(module_name)
+                    elif l == "sv":
+                        ax_code = gen.generate_axi_stream_sv(module_name)
+                    else:
+                        ax_code = gen.generate_axi_stream_vhdl(module_name)
+                    _write_output(ax_code, None)
+        else:
+            if l == "c":
+                header_path = Path(output_stem).with_suffix(".h")
+                source_path = Path(output_stem).with_suffix(".c")
+                header, source = gen.generate_c(module_name, header_path.name)
+                _write_output(header, header_path)
+                _write_output(source, source_path)
+            else:
+                out_path = Path(output_stem).with_suffix(ext_map[l])
+                _write_output(code, out_path)
+                if args.testbench and l != "sv":
+                    if l == "verilog":
+                        tb_code = gen.generate_testbench_verilog(module_name)
+                    else:
+                        tb_code = gen.generate_testbench_vhdl(module_name)
+                    tb_path = Path(output_stem + tb_ext_map[l])
+                    _write_output(tb_code, tb_path)
+                    if args.simulate:
+                        if l == "verilog":
+                            _simulate_verilog(out_path, tb_path)
+                        else:
+                            tb_name = tb_path.stem
+                            _simulate_vhdl(out_path, tb_path, tb_name)
+                if args.axi_stream:
+                    if l == "verilog":
+                        ax_code = gen.generate_axi_stream_verilog(module_name)
+                    elif l == "sv":
+                        ax_code = gen.generate_axi_stream_sv(module_name)
+                    else:
+                        ax_code = gen.generate_axi_stream_vhdl(module_name)
+                    ax_path = Path(output_stem + ax_ext_map[l])
+                    _write_output(ax_code, ax_path)
 
 
 if __name__ == "__main__":

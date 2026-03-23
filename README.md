@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Hardware Tested](https://img.shields.io/badge/hardware%20tested-Arty%20A7--100T-brightgreen)](hw_test/)
 
-**Parallel CRC HDL code generator** — Verilog-2001, SystemVerilog, and VHDL-1993. Hardware tested on Arty A7-100T.
+**Parallel CRC HDL code generator** — Verilog-2001, SystemVerilog, VHDL-1993, plus a portable C reference. Hardware tested on Arty A7-100T.
 
 Generates synthesizable, parallel CRC modules from a built-in catalog of 80+ named algorithms
 (reveng-verified), or from user-supplied polynomial parameters.
@@ -12,7 +12,7 @@ Includes self-checking testbenches, AXI4-Stream wrappers, and multi-vendor synth
 
 ## Features
 
-- **Three output languages** — Verilog-2001, SystemVerilog, VHDL-1993
+- **Three output targets** — Verilog-2001, SystemVerilog, VHDL-1993, and a portable C reference
 - **80+ named algorithms** — CRC-8 through CRC-64, parameters sourced from the
   [reveng CRC catalogue](https://reveng.sourceforge.io/crc-catalogue/), all check values verified
 - **Custom polynomials** — normal (Williams) or Koopman notation; check value auto-computed when not provided
@@ -62,7 +62,7 @@ crcZero --list-algorithms
 # Generate Verilog for CRC-32 (Ethernet/ZIP)
 crcZero --algorithm CRC-32/ISO-HDLC --data-width 8 --lang verilog
 
-# Generate all three languages to files
+# Generate all outputs to files (Verilog/SV/VHDL + C header/source)
 crcZero --algorithm CRC-32/ISO-HDLC --data-width 8 --lang all --output crc32
 
 # Generate with testbench and simulate immediately (requires iverilog in PATH)
@@ -73,6 +73,10 @@ crcZero --algorithm CRC-32/ISO-HDLC --data-width 8 --lang verilog \
 crcZero --algorithm CRC-32/ISO-HDLC --data-width 8 --lang verilog \
         --output crc32 --axi-stream
 # Produces: crc32.v  crc32_axis.v
+
+# Generate a portable C reference implementation
+crcZero --algorithm CRC-32/ISO-HDLC --lang c --output crc32_ref
+# Produces: crc32_ref.h  crc32_ref.c
 
 # Custom polynomial (Koopman notation)
 crcZero --poly-koopman 0x82608EDB --width 32 --init 0xFFFFFFFF \
@@ -90,6 +94,7 @@ assert gen.self_test()
 print(gen.generate_verilog())
 print(gen.generate_systemverilog())
 print(gen.generate_vhdl())
+header, source = gen.generate_c()
 print(gen.generate_testbench_verilog())
 
 # AXI4-Stream wrappers
@@ -195,7 +200,7 @@ On handshake: `crc_reg` resets to `HW_INIT` for the next packet.
 ```bash
 crcZero --algorithm CRC-32/ISO-HDLC --data-width 8 --output crc32 \
         --lang all --axi-stream
-# Produces: crc32.v crc32_axis.v  crc32.sv crc32_axis.sv  crc32.vhd crc32_axis.vhd
+# Produces: crc32.v crc32_axis.v  crc32.sv crc32_axis.sv  crc32.vhd crc32_axis.vhd  crc32.h crc32.c
 ```
 
 A self-checking AXI4-Stream testbench is available via
@@ -320,7 +325,7 @@ crcZero [--list-algorithms]
         [--algorithm NAME | --poly HEX | --poly-koopman HEX]
         [--width INT] [--init HEX] [--ref-in] [--ref-out]
         [--xor-out HEX] [--check HEX] [--residue HEX] [--name STR]
-        [--data-width INT] [--lang {verilog,sv,vhdl,all}]
+        [--data-width INT] [--lang {verilog,sv,vhdl,c,all}]
         [--output PATH] [--module-name NAME]
         [--no-self-test] [--testbench] [--simulate] [--axi-stream]
 ```
@@ -338,7 +343,7 @@ crcZero [--list-algorithms]
 | `--xor-out HEX` | `0x0` | Final XOR mask |
 | `--check HEX` | auto | Check value (auto-computed if omitted) |
 | `--data-width INT` | `8` | Data bits per clock cycle |
-| `--lang` | `verilog` | Output language: `verilog`, `sv`, `vhdl`, `all` |
+| `--lang` | `verilog` | Output language: `verilog`, `sv`, `vhdl`, `c`, `all` |
 | `--output PATH` | stdout | Output file stem (extension added automatically) |
 | `--module-name NAME` | auto | Override generated module/entity name |
 | `--no-self-test` | off | Skip self-test |
@@ -419,7 +424,7 @@ See [`hw_test/README.md`](hw_test/README.md) for full details.
 | 6 | Wishbone B4 and APB3/APB4 memory-mapped wrappers | Planned |
 | 7 | SVA formal verification assertions | Planned |
 | 8 | PyPI publish (`pip install crczero`) | In progress |
-| 9 | C reference implementation for MCU cross-validation | Planned |
+| 9 | C reference implementation for MCU cross-validation | Completed |
 | 10 | Web UI — browser-based online code generator | Planned |
 
 ## Contributing

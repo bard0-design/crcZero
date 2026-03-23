@@ -108,6 +108,21 @@ class CrcGenerator:
             self._get_equations(), self.algorithm, self.data_width, entity_name
         )
 
+    def generate_c(
+        self,
+        base_name: str | None = None,
+        header_filename: str | None = None,
+    ) -> tuple[str, str]:
+        """Generate a portable C reference implementation (header + source).
+
+        Args:
+            base_name: Override the base name for functions/macros.
+        Returns:
+            (header_str, source_str)
+        """
+        from crczero.renderers.c import CRenderer
+        return CRenderer().render(self.algorithm, base_name, header_filename)
+
     def generate_testbench_verilog(self, module_name: str | None = None) -> str:
         """Generate a self-checking Verilog-2001 testbench for iverilog+vvp.
 

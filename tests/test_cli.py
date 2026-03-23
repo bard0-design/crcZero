@@ -68,9 +68,21 @@ def test_generate_vhdl_stdout():
     assert "architecture rtl" in result.stdout
 
 
+def test_generate_c_stdout():
+    result = subprocess.run(
+        [sys.executable, "-m", "crczero.cli",
+         "--algorithm", "CRC-32/ISO-HDLC",
+         "--lang", "c"],
+        capture_output=True, text=True
+    )
+    assert result.returncode == 0
+    assert "uint64_t" in result.stdout
+    assert "crc_32_iso_hdlc" in result.stdout
+
+
 # ---- --lang all with file output ----
 
-def test_lang_all_creates_three_files(tmp_path):
+def test_lang_all_creates_five_files(tmp_path):
     stem = str(tmp_path / "crc32")
     result = subprocess.run(
         [sys.executable, "-m", "crczero.cli",
@@ -83,6 +95,8 @@ def test_lang_all_creates_three_files(tmp_path):
     assert (tmp_path / "crc32.v").exists()
     assert (tmp_path / "crc32.sv").exists()
     assert (tmp_path / "crc32.vhd").exists()
+    assert (tmp_path / "crc32.h").exists()
+    assert (tmp_path / "crc32.c").exists()
 
 
 def test_output_file_content(tmp_path):
