@@ -108,6 +108,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - **Test suite** — 365+ tests covering: software oracle, GF(2) equation derivation (full catalog), per-word random vectors, mixed ref modes, renderer structural correctness, CLI, testbench renderers, optional crcmod cross-validation, optional iverilog simulation
 - **Zero runtime dependencies** — pure Python 3.9+, stdlib only
 
+[1.2.0]: https://github.com/bard0-design/crcZero/releases/tag/v1.2.0
 [1.1.0]: https://github.com/bard0-design/crcZero/releases/tag/v1.1.0
 [1.0.0]: https://github.com/bard0-design/crcZero/releases/tag/v1.0.0
 [0.1.0-alpha]: https://github.com/bard0-design/crcZero/releases/tag/v0.1.0

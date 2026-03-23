@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/bard0-design/crcZero/actions/workflows/ci.yml/badge.svg)](https://github.com/bard0-design/crcZero/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![PyPI](https://img.shields.io/pypi/v/crczero)](https://pypi.org/project/crczero/)
 [![Hardware Tested](https://img.shields.io/badge/hardware%20tested-Arty%20A7--100T-brightgreen)](hw_test/)
 
 **Parallel CRC HDL code generator** — Verilog-2001, SystemVerilog, VHDL-1993, plus a portable C reference. Hardware tested on Arty A7-100T.
@@ -44,12 +45,16 @@ No matrix exponentiation — handles any CRC width and data width, including bot
 ## Installation
 
 ```bash
+pip install crczero
+```
+
+Or install from source for development:
+
+```bash
 git clone https://github.com/bard0-design/crcZero
 cd crcZero
 pip install -e .
 ```
-
-PyPI package (`pip install crczero`) is planned — see [Roadmap](#roadmap).
 
 ## Quick Start
 
@@ -423,7 +428,7 @@ See [`hw_test/README.md`](hw_test/README.md) for full details.
 | 5 | Byte-enable / TKEEP support (partial last word) | Planned |
 | 6 | Wishbone B4 and APB3/APB4 memory-mapped wrappers | Planned |
 | 7 | SVA formal verification assertions | Planned |
-| 8 | PyPI publish (`pip install crczero`) | In progress |
+| 8 | PyPI publish (`pip install crczero`) | Completed |
 | 9 | C reference implementation for MCU cross-validation | Completed |
 | 10 | Web UI — browser-based online code generator | Planned |
 
