@@ -1,3 +1,5 @@
+
+
 # crcZero
 
 [![CI](https://github.com/bard0-design/crcZero/actions/workflows/ci.yml/badge.svg)](https://github.com/bard0-design/crcZero/actions/workflows/ci.yml)
@@ -396,7 +398,7 @@ Typical runtime: ~5 min synthesis + ~4 min implementation.
 source hw_test/tcl/hw_test.tcl
 ```
 
-The script programs the FPGA, resets the AXI FIFO, sends 10 test packets (including back-to-back
+The script programs the FPGA, resets the AXI FIFO, sends 21 test packets (including back-to-back
 without FIFO reset) via JTAG-AXI, and compares each result against the software oracle:
 
 ```
