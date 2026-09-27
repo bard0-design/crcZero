@@ -55,7 +55,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="crcZero",
         description=(
-            "crcZero â€” CRC HDL code generator.\n"
+            "crcZero — CRC HDL code generator.\n"
             "Generates synthesizable Verilog-2001, SystemVerilog, or VHDL-1993 "
             "parallel CRC modules, plus a portable C reference implementation."
         ),
@@ -210,7 +210,7 @@ def _build_algorithm(args: argparse.Namespace) -> Algorithm:
             sys.exit(1)
         return CATALOG[name]
 
-    # Custom algorithm â€” require at minimum (--poly or --poly-koopman) and --width
+    # Custom algorithm — require at minimum (--poly or --poly-koopman) and --width
     has_poly = args.poly is not None or args.poly_koopman is not None
     if not has_poly or args.width is None:
         print(
@@ -223,6 +223,8 @@ def _build_algorithm(args: argparse.Namespace) -> Algorithm:
         sys.exit(1)
 
     width = args.width
+    if width < 1:
+        raise ValueError("--width must be >= 1")
     mask = (1 << width) - 1
 
     if args.poly_koopman is not None:
@@ -276,7 +278,7 @@ def _simulate_verilog(dut_path: Path, tb_path: Path) -> None:
     vvp = shutil.which("vvp")
     if not iverilog or not vvp:
         print(
-            "warning: iverilog/vvp not found in PATH â€” skipping Verilog simulation.\n"
+            "warning: iverilog/vvp not found in PATH — skipping Verilog simulation.\n"
             "  Install Icarus Verilog: https://steveicarus.github.io/iverilog/",
             file=sys.stderr,
         )
@@ -299,7 +301,7 @@ def _simulate_vhdl(dut_path: Path, tb_path: Path, tb_name: str) -> None:
     ghdl = shutil.which("ghdl")
     if not ghdl:
         print(
-            "warning: ghdl not found in PATH â€” skipping VHDL simulation.\n"
+            "warning: ghdl not found in PATH — skipping VHDL simulation.\n"
             "  Install GHDL: https://ghdl.github.io/ghdl/",
             file=sys.stderr,
         )
@@ -334,12 +336,18 @@ def main(argv: list[str] | None = None) -> None:
         _list_algorithms()
         sys.exit(0)
 
-    algorithm = _build_algorithm(args)
+    try:
+        algorithm = _build_algorithm(args)
+    except (ValueError, argparse.ArgumentTypeError) as exc:
+        parser.error(str(exc))
     data_width = args.data_width
 
     if data_width < 1:
         print("error: --data-width must be >= 1.", file=sys.stderr)
         sys.exit(1)
+
+    if args.testbench and args.lang != "c" and data_width % 8:
+        parser.error("--testbench requires --data-width to be a multiple of 8")
 
     gen = CrcGenerator(algorithm, data_width)
 

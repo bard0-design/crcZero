@@ -17,6 +17,8 @@ Versions follow [Semantic Versioning](https://semver.org/).
   Verilog testbench failures now terminate simulation with a nonzero status.
 - Resolve VHDL simulation paths and elaborate the generated entity independently
   of the output filename.
+- Report invalid CLI widths, hexadecimal parameters, and unsupported testbench
+  data widths as argument errors.
 
 
 ---
