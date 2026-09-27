@@ -34,6 +34,9 @@ class AxiStreamSVRenderer(AxiStreamVerilogRenderer):
         D     = equations.data_width
         hex_w = (N + 3) // 4
         hw_init = _hw_init(algorithm)
+        feedback = "crc_next"
+        if algorithm.ref_in != algorithm.ref_out:
+            feedback = "{" + ", ".join(f"crc_next[{i}]" for i in range(N)) + "}"
 
         lines: list[str] = []
         lines += self._axis_header(algorithm, data_width, core_name, wrapper_name, "//")
@@ -95,7 +98,7 @@ class AxiStreamSVRenderer(AxiStreamVerilogRenderer):
             lines.append( "                    m_axis_tdata  <= s_axis_tlast ? crc_next ^ XOR_OUT : crc_next;")
         else:
             lines.append( "                    m_axis_tdata  <= crc_next;")
-        lines.append( "                    crc_reg       <= s_axis_tlast ? HW_INIT : crc_next;")
+        lines.append(f"                    crc_reg       <= s_axis_tlast ? HW_INIT : {feedback};")
         lines.append( "                end else begin")
         lines.append( "                    m_axis_tvalid <= 1'b0;")
         lines.append( "                    m_axis_tlast  <= 1'b0;")

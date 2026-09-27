@@ -11,6 +11,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 ### Fixed
 
 - Exclude local test scratch directories from pytest discovery and Git status.
+- Correct AXI-Stream feedback for mixed input/output reflection in all HDL languages.
 
 ---
 

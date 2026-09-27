@@ -43,6 +43,9 @@ class AxiStreamVhdlRenderer(Renderer):
         D     = equations.data_width
         hex_w = (N + 3) // 4
         hw_init = _hw_init(algorithm)
+        feedback = "crc_next"
+        if algorithm.ref_in != algorithm.ref_out and N > 1:
+            feedback = " & ".join(f"crc_next({i})" for i in range(N))
 
         lines: list[str] = []
         lines += self._axis_header(algorithm, data_width, core_name, wrapper_name)
@@ -128,14 +131,14 @@ class AxiStreamVhdlRenderer(Renderer):
             lines.append("              crc_reg   <= HW_INIT;")
             lines.append("            else")
             lines.append("              m_tdata_r <= crc_next;")
-            lines.append("              crc_reg   <= crc_next;")
+            lines.append(f"              crc_reg   <= {feedback};")
             lines.append("            end if;")
         else:
             lines.append("            m_tdata_r <= crc_next;")
             lines.append("            if s_axis_tlast = '1' then")
             lines.append("              crc_reg <= HW_INIT;")
             lines.append("            else")
-            lines.append("              crc_reg <= crc_next;")
+            lines.append(f"              crc_reg <= {feedback};")
             lines.append("            end if;")
         lines.append("          else")
         lines.append("            m_tvalid_r <= '0';")
