@@ -110,12 +110,17 @@ class VerilogRenderer(Renderer):
             f"{prefix}",
             f"{prefix} Usage:",
             f"{prefix}   - Set crc_in = {N}'h{hw_init:0{hex_w}X} for the first word.",
-            f"{prefix}   - Chain crc_out -> crc_in for subsequent words.",
         ]
         if hw_init != algorithm.init:
             lines.append(
                 f"{prefix}     (hardware reset = bit_reverse(init) for reflected algorithms)"
             )
+        if algorithm.ref_in != algorithm.ref_out:
+            lines.append(
+                f"{prefix}   - Reverse all {N} bits of crc_out before feeding crc_in for subsequent words."
+            )
+        else:
+            lines.append(f"{prefix}   - Chain crc_out -> crc_in for subsequent words.")
         if algorithm.xor_out:
             lines.append(
                 f"{prefix}   - Final CRC = crc_out ^ {N}'h{algorithm.xor_out:0{hex_w}X}."

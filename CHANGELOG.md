@@ -21,6 +21,8 @@ Versions follow [Semantic Versioning](https://semver.org/).
   data widths as argument errors.
 - Keep generated Verilog testbenches portable by using completion markers
   instead of SystemVerilog severity tasks; document checks for direct simulator runs.
+- Explain mixed-reflection feedback conversion in generated core headers and
+  show the correct reflected initialization value and exact-width VHDL literals.
 
 ---
 
