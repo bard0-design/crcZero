@@ -290,10 +290,16 @@ def _simulate_verilog(dut_path: Path, tb_path: Path) -> None:
         print("error: iverilog compilation failed.", file=sys.stderr)
         sys.exit(r.returncode)
     print(f"Running:   vvp {sim_bin}", file=sys.stderr)
-    r = subprocess.run([vvp, str(sim_bin)])
+    r = subprocess.run([vvp, str(sim_bin)], capture_output=True, text=True)
+    print(r.stdout, end="")
+    print(r.stderr, end="", file=sys.stderr)
     if r.returncode != 0:
         print("error: vvp simulation failed.", file=sys.stderr)
         sys.exit(r.returncode)
+    output_lines = r.stdout.splitlines()
+    if "CRCZERO_TEST_FAIL" in output_lines or "CRCZERO_TEST_PASS" not in output_lines:
+        print("error: CRC testbench failed or did not complete.", file=sys.stderr)
+        sys.exit(1)
 
 
 def _simulate_vhdl(dut_path: Path, tb_path: Path, tb_name: str) -> None:

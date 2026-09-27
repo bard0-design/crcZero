@@ -9,7 +9,8 @@ Generates a self-checking testbench that:
 - Instantiates the generated CRC DUT
 - Applies test vectors derived from the software CRC oracle
 - Dumps a VCD waveform file for inspection with GTKWave or similar
-- Prints PASS / FAIL per test vector and exits with a non-zero exit status if any fail
+- Prints PASS / FAIL per test vector and a machine-readable completion marker
+- Uses Verilog-2001 tasks; the CLI runner converts failure markers to a nonzero exit
 
 The testbench is compatible with iverilog + vvp:
     iverilog -o sim.vvp crc_dut.v crc_tb.v
@@ -173,7 +174,10 @@ class VerilogTestbenchRenderer(Renderer):
         lines.append(f"        else")
         lines.append(f"            $display(\"%0d / {num_vectors} VECTORS FAILED\", fail_count);")
         lines.append(f"")
-        lines.append("        if (fail_count != 0) $fatal(1, \"CRC testbench failed\");")
+        lines.append("        if (fail_count == 0)")
+        lines.append('            $display("CRCZERO_TEST_PASS");')
+        lines.append("        else")
+        lines.append('            $display("CRCZERO_TEST_FAIL");')
         lines.append(f"        $finish;")
         lines.append(f"    end")
         lines.append(f"")
@@ -203,6 +207,8 @@ class VerilogTestbenchRenderer(Renderer):
             f"{prefix}   iverilog -o sim.vvp {dut_name}.v {dut_name}_tb.v",
             f"{prefix}   vvp sim.vvp",
             f"{prefix}   # VCD written to {dut_name}_tb.vcd",
+            f"{prefix}   # Require CRCZERO_TEST_PASS in output; $finish does not signal failure.",
+            f"{prefix}   # crcZero --simulate checks this marker and returns nonzero on failure.",
             sep,
             "",
         ]

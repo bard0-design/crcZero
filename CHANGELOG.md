@@ -14,12 +14,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Correct AXI-Stream feedback for mixed input/output reflection in all HDL languages.
 - Emit exact-width VHDL constants for CRC widths not divisible by four.
 - Derive generated testbench expectations from the independent software CRC oracle;
-  Verilog testbench failures now terminate simulation with a nonzero status.
+  the CLI reports a nonzero status for failed or incomplete Verilog simulations.
 - Resolve VHDL simulation paths and elaborate the generated entity independently
   of the output filename.
 - Report invalid CLI widths, hexadecimal parameters, and unsupported testbench
   data widths as argument errors.
-
+- Keep generated Verilog testbenches portable by using completion markers
+  instead of SystemVerilog severity tasks; document checks for direct simulator runs.
 
 ---
 
