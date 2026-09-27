@@ -9,7 +9,7 @@ Generates a self-checking testbench that:
 - Instantiates the generated CRC DUT
 - Applies test vectors derived from the software CRC oracle
 - Dumps a VCD waveform file for inspection with GTKWave or similar
-- Prints PASS / FAIL per test vector and exits with a non-zero plusarg if any fail
+- Prints PASS / FAIL per test vector and exits with a non-zero exit status if any fail
 
 The testbench is compatible with iverilog + vvp:
     iverilog -o sim.vvp crc_dut.v crc_tb.v
@@ -20,10 +20,13 @@ VCD is written to <module_name>_tb.vcd by default.
 
 from __future__ import annotations
 
+from dataclasses import replace
+import random
+
 from crczero.algorithm import Algorithm
 from crczero.equations import CrcEquations
 from crczero.renderers.base import Renderer
-from crczero.software_crc import compute_crc
+from crczero.software_crc import _reflect, compute_crc
 
 
 def _build_test_vectors(
@@ -37,38 +40,23 @@ def _build_test_vectors(
     1. Byte-by-byte processing of b"123456789" (reproduces the check value).
     2. A small set of deterministic random patterns for extra coverage.
     """
-    import random
-
-    assert data_width % 8 == 0
+    if data_width < 8 or data_width % 8:
+        raise ValueError("testbench data_width must be a multiple of 8")
     bytes_per_word = data_width // 8
     N = algorithm.width
     mask_n = (1 << N) - 1
-    mask_d = (1 << data_width) - 1
-
     vectors: list[tuple[int, int, int]] = []
 
-    def _process_word(crc: int, word_bytes: bytes) -> tuple[int, int, int]:
-        """Simulate the DUT for one word; return (crc_in, data_in, crc_out)."""
-        from crczero.equations import derive_equations, simulate_equations
-        eqs = derive_equations(algorithm, data_width)
-        if algorithm.ref_in:
-            word = int.from_bytes(word_bytes, 'little')
-        else:
-            word = int.from_bytes(word_bytes, 'big')
-        new_crc = simulate_equations(eqs, crc, word)
-        return crc, word, new_crc
-
-    # Cache equations object to avoid recomputing
-    from crczero.equations import derive_equations, simulate_equations
-    eqs = derive_equations(algorithm, data_width)
-
     def _step(crc: int, word_bytes: bytes) -> tuple[int, int, int]:
-        if algorithm.ref_in:
-            word = int.from_bytes(word_bytes, 'little')
-        else:
-            word = int.from_bytes(word_bytes, 'big')
-        new_crc = simulate_equations(eqs, crc, word)
-        return crc, word, new_crc
+        # Convert the hardware input register to Williams space. The oracle
+        # is independent of the symbolic equations used to generate the DUT.
+        init = _reflect(crc, N) if algorithm.ref_in else crc
+        oracle = replace(algorithm, init=init, xor_out=0)
+        word = int.from_bytes(word_bytes, "little" if algorithm.ref_in else "big")
+        return crc, word, compute_crc(oracle, word_bytes)
+
+    def _feedback(crc: int) -> int:
+        return _reflect(crc, N) if algorithm.ref_in != algorithm.ref_out else crc
 
     # Vectors from b"123456789"
     data = b"123456789"
@@ -78,19 +66,12 @@ def _build_test_vectors(
         data = data + b"\x00" * (bytes_per_word - remainder)
 
     # Hardware reset value: bit_reverse(init) for reflected algorithms.
-    def _bit_rev(v: int, n: int) -> int:
-        r = 0
-        for _ in range(n):
-            r = (r << 1) | (v & 1)
-            v >>= 1
-        return r
-
-    hw_init = _bit_rev(algorithm.init, N) if algorithm.ref_in else algorithm.init
+    hw_init = _reflect(algorithm.init, N) if algorithm.ref_in else algorithm.init
     crc = hw_init & mask_n
     for i in range(0, len(data), bytes_per_word):
         crc_in, data_in, crc_out = _step(crc, data[i: i + bytes_per_word])
         vectors.append((crc_in, data_in, crc_out))
-        crc = crc_out
+        crc = _feedback(crc_out)
 
     # Random vectors
     rng = random.Random(0xDEADBEEF)
@@ -99,7 +80,7 @@ def _build_test_vectors(
         word_bytes = bytes(rng.randint(0, 255) for _ in range(bytes_per_word))
         crc_in, data_in, crc_out = _step(crc, word_bytes)
         vectors.append((crc_in, data_in, crc_out))
-        crc = crc_out
+        crc = _feedback(crc_out)
 
     return vectors
 
@@ -192,6 +173,7 @@ class VerilogTestbenchRenderer(Renderer):
         lines.append(f"        else")
         lines.append(f"            $display(\"%0d / {num_vectors} VECTORS FAILED\", fail_count);")
         lines.append(f"")
+        lines.append("        if (fail_count != 0) $fatal(1, \"CRC testbench failed\");")
         lines.append(f"        $finish;")
         lines.append(f"    end")
         lines.append(f"")
