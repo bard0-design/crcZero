@@ -12,6 +12,13 @@ from crczero.equations import CrcEquations
 from crczero.renderers.base import Renderer
 
 
+def _slv_literal(value: int, width: int) -> str:
+    """Return an exact-width VHDL-1993 vector literal."""
+    if width % 4 == 0:
+        return f'x"{value:0{width // 4}X}"'
+    return f'"{value:0{width}b}"'
+
+
 class VhdlRenderer(Renderer):
     """Generates synthesizable VHDL-1993 parallel CRC entities.
 

@@ -12,6 +12,8 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 - Exclude local test scratch directories from pytest discovery and Git status.
 - Correct AXI-Stream feedback for mixed input/output reflection in all HDL languages.
+- Emit exact-width VHDL constants for CRC widths not divisible by four.
+
 
 ---
 
