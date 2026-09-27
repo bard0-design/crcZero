@@ -86,6 +86,8 @@ def _build_axis_tb_verilog(
     assert bpw >= 1 and D % 8 == 0
 
     # Compute expected CRC for every packet using the software oracle.
+    # No TKEEP: every byte in the final word participates in the CRC.
+    packets = [pkt + b"\x00" * (-len(pkt) % bpw) for pkt in packets]
     expected = [compute_crc(alg, pkt) for pkt in packets]
 
     lines: list[str] = []
@@ -140,6 +142,7 @@ def _build_axis_tb_verilog(
     lines.append("    task send_beat;")
     lines.append(f"        input [{D-1}:0] data;")
     lines.append("        input         last;")
+    lines.append(f"        input [{N-1}:0] expected_crc;")
     lines.append("        input integer m_stall;  // downstream: hold m_tready=0 N cycles")
     lines.append("        input integer s_delay;  // upstream: pause s_tvalid=0 N cycles")
     lines.append("        begin")
@@ -161,6 +164,10 @@ def _build_axis_tb_verilog(
     lines.append("            @(posedge clk);")
     lines.append("            while (!s_tready) @(posedge clk);")
     lines.append("            #1;")
+    lines.append("            if (m_tvalid !== 1'b1 || m_tlast !== last || m_tdata !== expected_crc) begin")
+    lines.append('                $display("FAIL output beat: expected=%h got=%h last=%b", expected_crc, m_tdata, m_tlast);')
+    lines.append("                fail_count = fail_count + 1;")
+    lines.append("            end")
     lines.append("            s_tvalid = 0;")
     lines.append("            s_tlast  = 0;")
     lines.append("        end")
@@ -211,9 +218,6 @@ def _build_axis_tb_verilog(
 
     # --- Pass 1: pseudo-random stall patterns on both sides ---
     for pkt_idx, (pkt, bp, exp) in enumerate(zip(packets, bp_cycles_per_packet, expected)):
-        # Pad to word boundary
-        if len(pkt) % bpw:
-            pkt = pkt + b"\x00" * (bpw - len(pkt) % bpw)
         words = [pkt[i:i+bpw] for i in range(0, len(pkt), bpw)]
 
         # Per-beat pseudo-random stall patterns (LCG, max 3 cycles each).
@@ -232,10 +236,13 @@ def _build_axis_tb_verilog(
         for widx, word_bytes in enumerate(words):
             is_last = (widx == len(words) - 1)
             # little-endian: first byte → data_in[7:0], next → data_in[15:8] …
-            word_val = int.from_bytes(word_bytes, 'little')
+            partial = compute_crc(alg, pkt[:(widx + 1) * bpw])
+            if not is_last:
+                partial ^= alg.xor_out
+            word_val = int.from_bytes(word_bytes, 'little' if alg.ref_in else 'big')
             last_str = "1" if is_last else "0"
             lines.append(
-                f"        send_beat({D}'h{word_val:0{dhex_w}X}, {last_str},"
+                f"        send_beat({D}'h{word_val:0{dhex_w}X}, {last_str}, {N}'h{partial:0{hex_w}X},"
                 f" {m_stalls[widx]}, {s_delays[widx]});"
             )
 
@@ -250,17 +257,18 @@ def _build_axis_tb_verilog(
 
     # --- Pass 2: no stalls — verify basic throughput at full rate ---
     for pkt_idx, (pkt, exp) in enumerate(zip(packets, expected)):
-        if len(pkt) % bpw:
-            pkt = pkt + b"\x00" * (bpw - len(pkt) % bpw)
         words = [pkt[i:i+bpw] for i in range(0, len(pkt), bpw)]
 
         lines.append(f"        // --- Packet {pkt_idx} (no-stall): {len(words)} beat(s) ---")
         lines.append("        m_tready = 1;")
         for widx, word_bytes in enumerate(words):
             is_last = (widx == len(words) - 1)
-            word_val = int.from_bytes(word_bytes, 'little')
+            partial = compute_crc(alg, pkt[:(widx + 1) * bpw])
+            if not is_last:
+                partial ^= alg.xor_out
+            word_val = int.from_bytes(word_bytes, 'little' if alg.ref_in else 'big')
             last_str = "1" if is_last else "0"
-            lines.append(f"        send_beat({D}'h{word_val:0{dhex_w}X}, {last_str}, 0, 0);")
+            lines.append(f"        send_beat({D}'h{word_val:0{dhex_w}X}, {last_str}, {N}'h{partial:0{hex_w}X}, 0, 0);")
 
         lines.append(f"        collect_crc(0, got_crc);")
         lines.append(f"        if (got_crc !== {N}'h{exp:0{hex_w}X}) begin")
@@ -417,8 +425,6 @@ def test_axis_verilog_all_pass(alg_name, data_width, tmp_path):
     bpw = data_width // 8
     packets = []
     for pkt in _PACKETS:
-        if len(pkt) % bpw:
-            pkt = pkt + b"\x00" * (bpw - len(pkt) % bpw)
         packets.append(pkt)
 
     tb_code = _build_axis_tb_verilog(alg_name, core_name, data_width, packets, _BP)

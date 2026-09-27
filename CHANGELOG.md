@@ -23,6 +23,8 @@ Versions follow [Semantic Versioning](https://semver.org/).
   instead of SystemVerilog severity tasks; document checks for direct simulator runs.
 - Explain mixed-reflection feedback conversion in generated core headers and
   show the correct reflected initialization value and exact-width VHDL literals.
+- Check every AXI output beat at 8, 16, 32, and 64 data bits, correct test
+  byte packing and padding, and detect injected intermediate CRC corruption.
 
 ---
 
