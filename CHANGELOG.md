@@ -8,6 +8,10 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Exclude local test scratch directories from pytest discovery and Git status.
+
 ---
 
 ## [1.2.0] — 2026-03-23

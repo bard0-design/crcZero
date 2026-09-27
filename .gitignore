@@ -56,3 +56,6 @@ dfx_runtime.txt
 
 # Private / uncommitted scratch area
 no_commit/
+
+# Local test scratch directories
+tests/_tmp/
