@@ -8,6 +8,24 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Exclude local test scratch directories from pytest discovery and Git status.
+- Correct AXI-Stream feedback for mixed input/output reflection in all HDL languages.
+- Emit exact-width VHDL constants for CRC widths not divisible by four.
+- Derive generated testbench expectations from the independent software CRC oracle;
+  the CLI reports a nonzero status for failed or incomplete Verilog simulations.
+- Resolve VHDL simulation paths and elaborate the generated entity independently
+  of the output filename.
+- Report invalid CLI widths, hexadecimal parameters, and unsupported testbench
+  data widths as argument errors.
+- Keep generated Verilog testbenches portable by using completion markers
+  instead of SystemVerilog severity tasks; document checks for direct simulator runs.
+- Explain mixed-reflection feedback conversion in generated core headers and
+  show the correct reflected initialization value and exact-width VHDL literals.
+- Check every AXI output beat at 8, 16, 32, and 64 data bits, correct test
+  byte packing and padding, and detect injected intermediate CRC corruption.
+
 ---
 
 ## [1.2.0] — 2026-03-23

@@ -250,6 +250,12 @@ crcZero --algorithm CRC-32/ISO-HDLC --output crc32 --lang verilog --testbench --
 crcZero --algorithm CRC-32/ISO-HDLC --output crc32 --lang vhdl --testbench --simulate
 ```
 
+Generated Verilog testbenches use Verilog-2001 system tasks and print
+`CRCZERO_TEST_PASS` or `CRCZERO_TEST_FAIL` before `$finish`. The CLI
+`--simulate` runner returns an error for a failed or incomplete run. When
+invoking a simulator directly, require the `CRCZERO_TEST_PASS` output line;
+its process exit status alone does not indicate whether CRC checks passed.
+
 Each testbench applies 25 test vectors (`b"123456789"` decomposed byte-by-byte + 16 deterministic
 random words) and reports PASS/FAIL per vector. VCDs are saved to `tests/vcd/`.
 Compatible with iverilog/vvp, ghdl, and Vivado xsim.

@@ -10,6 +10,14 @@ from __future__ import annotations
 from crczero.algorithm import Algorithm
 from crczero.equations import CrcEquations
 from crczero.renderers.base import Renderer
+from crczero.software_crc import _reflect
+
+
+def _slv_literal(value: int, width: int) -> str:
+    """Return an exact-width VHDL-1993 vector literal."""
+    if width % 4 == 0:
+        return f'x"{value:0{width // 4}X}"'
+    return f'"{value:0{width}b}"'
 
 
 class VhdlRenderer(Renderer):
@@ -86,6 +94,7 @@ class VhdlRenderer(Renderer):
     ) -> list[str]:
         N = algorithm.width
         hex_w = (N + 3) // 4
+        hw_init = _reflect(algorithm.init, N) if algorithm.ref_in else algorithm.init
         sep = "-- " + "=" * 62
 
         lines = [
@@ -108,12 +117,19 @@ class VhdlRenderer(Renderer):
             f"-- Generated  : {self._timestamp()}",
             "--",
             "-- Usage:",
-            f'--   Set crc_in = x"{algorithm.init:0{hex_w}X}" for the first word.',
-            "--   Chain crc_out -> crc_in for subsequent words.",
+            f"--   Set crc_in = {_slv_literal(hw_init, N)} for the first word.",
         ]
+        if hw_init != algorithm.init:
+            lines.append("--   Hardware reset = bit_reverse(init) for reflected algorithms.")
+        if algorithm.ref_in != algorithm.ref_out:
+            lines.append(
+                f"--   Reverse all {N} bits of crc_out before feeding crc_in for subsequent words."
+            )
+        else:
+            lines.append("--   Chain crc_out -> crc_in for subsequent words.")
         if algorithm.xor_out:
             lines.append(
-                f'--   Final CRC = crc_out xor x"{algorithm.xor_out:0{hex_w}X}".'
+                f"--   Final CRC = crc_out xor {_slv_literal(algorithm.xor_out, N)}."
             )
         else:
             lines.append("--   Final CRC = crc_out (no XOR needed).")

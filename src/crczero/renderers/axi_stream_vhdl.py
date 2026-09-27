@@ -25,6 +25,7 @@ from crczero.algorithm import Algorithm
 from crczero.equations import CrcEquations
 from crczero.renderers.axi_stream_verilog import _hw_init
 from crczero.renderers.base import Renderer
+from crczero.renderers.vhdl import _slv_literal
 
 
 class AxiStreamVhdlRenderer(Renderer):
@@ -41,8 +42,10 @@ class AxiStreamVhdlRenderer(Renderer):
         wrapper_name = f"{core_name}_axis"
         N     = equations.width
         D     = equations.data_width
-        hex_w = (N + 3) // 4
         hw_init = _hw_init(algorithm)
+        feedback = "crc_next"
+        if algorithm.ref_in != algorithm.ref_out and N > 1:
+            feedback = " & ".join(f"crc_next({i})" for i in range(N))
 
         lines: list[str] = []
         lines += self._axis_header(algorithm, data_width, core_name, wrapper_name)
@@ -74,9 +77,9 @@ class AxiStreamVhdlRenderer(Renderer):
         # ---- Architecture ----
         lines.append(f"architecture rtl of {wrapper_name} is")
         lines.append("")
-        lines.append(f"  constant HW_INIT : std_logic_vector({N-1} downto 0) := x\"{hw_init:0{hex_w}X}\";")
+        lines.append(f"  constant HW_INIT : std_logic_vector({N-1} downto 0) := {_slv_literal(hw_init, N)};")
         if algorithm.xor_out:
-            lines.append(f"  constant XOR_OUT : std_logic_vector({N-1} downto 0) := x\"{algorithm.xor_out:0{hex_w}X}\";")
+            lines.append(f"  constant XOR_OUT : std_logic_vector({N-1} downto 0) := {_slv_literal(algorithm.xor_out, N)};")
         lines.append("")
         lines.append(f"  signal crc_reg    : std_logic_vector({N-1} downto 0) := HW_INIT;")
         lines.append(f"  signal crc_next   : std_logic_vector({N-1} downto 0);")
@@ -128,14 +131,14 @@ class AxiStreamVhdlRenderer(Renderer):
             lines.append("              crc_reg   <= HW_INIT;")
             lines.append("            else")
             lines.append("              m_tdata_r <= crc_next;")
-            lines.append("              crc_reg   <= crc_next;")
+            lines.append(f"              crc_reg   <= {feedback};")
             lines.append("            end if;")
         else:
             lines.append("            m_tdata_r <= crc_next;")
             lines.append("            if s_axis_tlast = '1' then")
             lines.append("              crc_reg <= HW_INIT;")
             lines.append("            else")
-            lines.append("              crc_reg <= crc_next;")
+            lines.append(f"              crc_reg <= {feedback};")
             lines.append("            end if;")
         lines.append("          else")
         lines.append("            m_tvalid_r <= '0';")

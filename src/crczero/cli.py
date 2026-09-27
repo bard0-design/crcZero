@@ -223,6 +223,8 @@ def _build_algorithm(args: argparse.Namespace) -> Algorithm:
         sys.exit(1)
 
     width = args.width
+    if width < 1:
+        raise ValueError("--width must be >= 1")
     mask = (1 << width) - 1
 
     if args.poly_koopman is not None:
@@ -288,10 +290,16 @@ def _simulate_verilog(dut_path: Path, tb_path: Path) -> None:
         print("error: iverilog compilation failed.", file=sys.stderr)
         sys.exit(r.returncode)
     print(f"Running:   vvp {sim_bin}", file=sys.stderr)
-    r = subprocess.run([vvp, str(sim_bin)])
+    r = subprocess.run([vvp, str(sim_bin)], capture_output=True, text=True)
+    print(r.stdout, end="")
+    print(r.stderr, end="", file=sys.stderr)
     if r.returncode != 0:
         print("error: vvp simulation failed.", file=sys.stderr)
         sys.exit(r.returncode)
+    output_lines = r.stdout.splitlines()
+    if "CRCZERO_TEST_FAIL" in output_lines or "CRCZERO_TEST_PASS" not in output_lines:
+        print("error: CRC testbench failed or did not complete.", file=sys.stderr)
+        sys.exit(1)
 
 
 def _simulate_vhdl(dut_path: Path, tb_path: Path, tb_name: str) -> None:
@@ -304,6 +312,8 @@ def _simulate_vhdl(dut_path: Path, tb_path: Path, tb_name: str) -> None:
             file=sys.stderr,
         )
         return
+    dut_path = dut_path.resolve()
+    tb_path = tb_path.resolve()
     vcd_path = tb_path.parent / f"{tb_name}.vcd"
     workdir = tb_path.parent
     print(f"Analysing: ghdl -a {dut_path} {tb_path}", file=sys.stderr)
@@ -332,12 +342,18 @@ def main(argv: list[str] | None = None) -> None:
         _list_algorithms()
         sys.exit(0)
 
-    algorithm = _build_algorithm(args)
+    try:
+        algorithm = _build_algorithm(args)
+    except (ValueError, argparse.ArgumentTypeError) as exc:
+        parser.error(str(exc))
     data_width = args.data_width
 
     if data_width < 1:
         print("error: --data-width must be >= 1.", file=sys.stderr)
         sys.exit(1)
+
+    if args.testbench and args.lang != "c" and data_width % 8:
+        parser.error("--testbench requires --data-width to be a multiple of 8")
 
     gen = CrcGenerator(algorithm, data_width)
 
@@ -423,7 +439,11 @@ def main(argv: list[str] | None = None) -> None:
                         if l == "verilog":
                             _simulate_verilog(out_path, tb_path)
                         else:
-                            tb_name = tb_path.stem
+                            from crczero.renderers.vhdl import VhdlRenderer
+                            dut_name = module_name or VhdlRenderer().default_name(
+                                algorithm, data_width
+                            )
+                            tb_name = dut_name + "_tb"
                             _simulate_vhdl(out_path, tb_path, tb_name)
                 if args.axi_stream:
                     if l == "verilog":

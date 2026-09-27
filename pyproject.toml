@@ -42,3 +42,7 @@ Changelog = "https://github.com/bard0-design/crcZero/blob/main/CHANGELOG.md"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/crczero"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+norecursedirs = ["_tmp", ".*", "build", "dist", "*.egg"]

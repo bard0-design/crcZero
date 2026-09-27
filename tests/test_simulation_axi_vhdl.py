@@ -87,6 +87,8 @@ def _build_axis_tb_vhdl(
 
     assert bpw >= 1 and D % 8 == 0
 
+    # No TKEEP: every byte in the final word participates in the CRC.
+    packets = [pkt + b"\x00" * (-len(pkt) % bpw) for pkt in packets]
     expected = [compute_crc(alg, pkt) for pkt in packets]
     tb_name  = f"{wrapper_name}_sim_tb"
 
@@ -145,6 +147,7 @@ def _build_axis_tb_vhdl(
     lines.append(f"    procedure send_beat(")
     lines.append(f"      data    : in std_logic_vector({D-1} downto 0);")
     lines.append( "      last    : in std_logic;")
+    lines.append(f"      expected_crc : in std_logic_vector({N-1} downto 0);")
     lines.append( "      m_stall : in integer := 0;")
     lines.append( "      s_delay : in integer := 0")
     lines.append( "    ) is")
@@ -169,6 +172,11 @@ def _build_axis_tb_vhdl(
     lines.append( "        wait until rising_edge(clk);")
     lines.append( "        exit when s_axis_tready = '1';")
     lines.append( "      end loop;")
+    lines.append("      wait for 1 ns; -- sample after registered outputs settle")
+    lines.append("      if m_axis_tvalid /= '1' or m_axis_tlast /= last or m_axis_tdata /= expected_crc then")
+    lines.append('        report "FAIL output beat" severity error;')
+    lines.append("        fail_count := fail_count + 1;")
+    lines.append("      end if;")
     lines.append( "      s_axis_tvalid <= '0';")
     lines.append( "      s_axis_tlast  <= '0';")
     lines.append( "    end procedure;")
@@ -214,8 +222,6 @@ def _build_axis_tb_vhdl(
 
     # --- Pass 1: pseudo-random stall patterns on both sides ---
     for pkt_idx, (pkt, bp, exp) in enumerate(zip(packets, bp_cycles_per_packet, expected)):
-        if len(pkt) % bpw:
-            pkt = pkt + b"\x00" * (bpw - len(pkt) % bpw)
         words = [pkt[i:i+bpw] for i in range(0, len(pkt), bpw)]
 
         # Per-beat pseudo-random stall patterns (LCG, max 3 cycles each).
@@ -231,10 +237,13 @@ def _build_axis_tb_vhdl(
         for widx, word_bytes in enumerate(words):
             is_last = widx == len(words) - 1
             # Little-endian: first byte → data_in(7 downto 0), matching the CRC equations.
-            word_val = int.from_bytes(word_bytes, 'little')
+            partial = compute_crc(alg, pkt[:(widx + 1) * bpw])
+            if not is_last:
+                partial ^= alg.xor_out
+            word_val = int.from_bytes(word_bytes, 'little' if alg.ref_in else 'big')
             last_char = "'1'" if is_last else "'0'"
             lines.append(
-                f'    send_beat(x"{word_val:0{dhex_w}X}", {last_char},'
+                f'    send_beat(x"{word_val:0{dhex_w}X}", {last_char}, x"{partial:0{hex_w}X}",'
                 f' {m_stalls[widx]}, {s_delays[widx]});'
             )
 
@@ -249,17 +258,18 @@ def _build_axis_tb_vhdl(
 
     # --- Pass 2: no stalls — verify basic throughput at full rate ---
     for pkt_idx, (pkt, exp) in enumerate(zip(packets, expected)):
-        if len(pkt) % bpw:
-            pkt = pkt + b"\x00" * (bpw - len(pkt) % bpw)
         words = [pkt[i:i+bpw] for i in range(0, len(pkt), bpw)]
 
         lines.append(f"    -- Packet {pkt_idx} (no-stall): {len(words)} beat(s)")
         lines.append( "    m_axis_tready <= '1';")
         for widx, word_bytes in enumerate(words):
             is_last = widx == len(words) - 1
-            word_val = int.from_bytes(word_bytes, 'little')
+            partial = compute_crc(alg, pkt[:(widx + 1) * bpw])
+            if not is_last:
+                partial ^= alg.xor_out
+            word_val = int.from_bytes(word_bytes, 'little' if alg.ref_in else 'big')
             last_char = "'1'" if is_last else "'0'"
-            lines.append(f'    send_beat(x"{word_val:0{dhex_w}X}", {last_char}, 0, 0);')
+            lines.append(f'    send_beat(x"{word_val:0{dhex_w}X}", {last_char}, x"{partial:0{hex_w}X}", 0, 0);')
 
         lines.append(f"    collect_crc(0, got_crc);")
         lines.append(f'    if got_crc /= x"{exp:0{hex_w}X}" then')
@@ -437,8 +447,6 @@ def test_axis_vhdl_all_pass(alg_name, data_width, tmp_path):
     bpw = data_width // 8
     packets = []
     for pkt in _PACKETS:
-        if len(pkt) % bpw:
-            pkt = pkt + b"\x00" * (bpw - len(pkt) % bpw)
         packets.append(pkt)
 
     tb_entity = f"{wrapper_name}_sim_tb"

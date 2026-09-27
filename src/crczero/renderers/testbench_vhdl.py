@@ -22,6 +22,7 @@ from __future__ import annotations
 from crczero.algorithm import Algorithm
 from crczero.equations import CrcEquations
 from crczero.renderers.base import Renderer
+from crczero.renderers.vhdl import _slv_literal
 from crczero.renderers.testbench_verilog import _build_test_vectors
 
 
@@ -39,8 +40,6 @@ class VhdlTestbenchRenderer(Renderer):
         tb_name = f"{dut_name}_tb"
         N = equations.width
         D = equations.data_width
-        hex_w = (N + 3) // 4
-        dhex_w = (D + 3) // 4
 
         vectors = _build_test_vectors(algorithm, data_width, num_random=16)
         num_vectors = len(vectors)
@@ -77,13 +76,13 @@ class VhdlTestbenchRenderer(Renderer):
 
         # Build constant arrays
         crc_in_vals = ", ".join(
-            f'x"{ci:0{hex_w}X}"' for (ci, _di, _co) in vectors
+            _slv_literal(ci, N) for (ci, _di, _co) in vectors
         )
         data_in_vals = ", ".join(
-            f'x"{di:0{dhex_w}X}"' for (_ci, di, _co) in vectors
+            _slv_literal(di, D) for (_ci, di, _co) in vectors
         )
         expected_vals = ", ".join(
-            f'x"{co:0{hex_w}X}"' for (_ci, _di, co) in vectors
+            _slv_literal(co, N) for (_ci, _di, co) in vectors
         )
 
         lines.append(f"    constant C_CRC_IN   : t_slv_n := ({crc_in_vals});")
