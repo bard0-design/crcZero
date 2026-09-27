@@ -15,6 +15,8 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Emit exact-width VHDL constants for CRC widths not divisible by four.
 - Derive generated testbench expectations from the independent software CRC oracle;
   Verilog testbench failures now terminate simulation with a nonzero status.
+- Resolve VHDL simulation paths and elaborate the generated entity independently
+  of the output filename.
 
 
 ---

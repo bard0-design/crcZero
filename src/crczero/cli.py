@@ -55,7 +55,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="crcZero",
         description=(
-            "crcZero — CRC HDL code generator.\n"
+            "crcZero â€” CRC HDL code generator.\n"
             "Generates synthesizable Verilog-2001, SystemVerilog, or VHDL-1993 "
             "parallel CRC modules, plus a portable C reference implementation."
         ),
@@ -210,7 +210,7 @@ def _build_algorithm(args: argparse.Namespace) -> Algorithm:
             sys.exit(1)
         return CATALOG[name]
 
-    # Custom algorithm — require at minimum (--poly or --poly-koopman) and --width
+    # Custom algorithm â€” require at minimum (--poly or --poly-koopman) and --width
     has_poly = args.poly is not None or args.poly_koopman is not None
     if not has_poly or args.width is None:
         print(
@@ -276,7 +276,7 @@ def _simulate_verilog(dut_path: Path, tb_path: Path) -> None:
     vvp = shutil.which("vvp")
     if not iverilog or not vvp:
         print(
-            "warning: iverilog/vvp not found in PATH — skipping Verilog simulation.\n"
+            "warning: iverilog/vvp not found in PATH â€” skipping Verilog simulation.\n"
             "  Install Icarus Verilog: https://steveicarus.github.io/iverilog/",
             file=sys.stderr,
         )
@@ -299,11 +299,13 @@ def _simulate_vhdl(dut_path: Path, tb_path: Path, tb_name: str) -> None:
     ghdl = shutil.which("ghdl")
     if not ghdl:
         print(
-            "warning: ghdl not found in PATH — skipping VHDL simulation.\n"
+            "warning: ghdl not found in PATH â€” skipping VHDL simulation.\n"
             "  Install GHDL: https://ghdl.github.io/ghdl/",
             file=sys.stderr,
         )
         return
+    dut_path = dut_path.resolve()
+    tb_path = tb_path.resolve()
     vcd_path = tb_path.parent / f"{tb_name}.vcd"
     workdir = tb_path.parent
     print(f"Analysing: ghdl -a {dut_path} {tb_path}", file=sys.stderr)
@@ -423,7 +425,11 @@ def main(argv: list[str] | None = None) -> None:
                         if l == "verilog":
                             _simulate_verilog(out_path, tb_path)
                         else:
-                            tb_name = tb_path.stem
+                            from crczero.renderers.vhdl import VhdlRenderer
+                            dut_name = module_name or VhdlRenderer().default_name(
+                                algorithm, data_width
+                            )
+                            tb_name = dut_name + "_tb"
                             _simulate_vhdl(out_path, tb_path, tb_name)
                 if args.axi_stream:
                     if l == "verilog":
